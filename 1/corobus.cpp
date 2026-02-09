@@ -39,7 +39,6 @@ wakeup_queue_suspend_this(struct wakeup_queue *queue)
 	entry.coro = coro_this();
 	rlist_add_tail_entry(&queue->coros, &entry, base);
 	coro_suspend();
-	/* Safe even if already removed by a waker. */
 	rlist_del_entry(&entry, base);
 }
 
@@ -51,7 +50,6 @@ wakeup_queue_wakeup_first(struct wakeup_queue *queue)
 		return;
 	struct wakeup_entry *entry = rlist_first_entry(&queue->coros,
 		struct wakeup_entry, base);
-	/* Detach before wakeup so the queue owner may be destroyed safely. */
 	rlist_del_entry(entry, base);
 	coro_wakeup(entry->coro);
 }
@@ -132,7 +130,6 @@ coro_bus_delete(struct coro_bus *bus)
 	for (int i = 0; i < bus->channel_count; ++i) {
 		if (bus->channels == NULL || bus->channels[i] == NULL)
 			continue;
-		/* Per spec, no suspended coroutines should exist here. */
 		assert(rlist_empty(&bus->channels[i]->send_queue.coros));
 		assert(rlist_empty(&bus->channels[i]->recv_queue.coros));
 		delete bus->channels[i];
@@ -179,18 +176,6 @@ coro_bus_channel_open(struct coro_bus *bus, size_t size_limit)
 	ch->data.clear();
 	bus->channels[free_idx] = ch;
 	coro_bus_errno_set(CORO_BUS_ERR_NONE);
-	/*
-	 * One of the tests will force you to reuse the channel
-	 * descriptors. It means, that if your maximal channel
-	 * descriptor is N, and you have any free descriptor in
-	 * the range 0-N, then you should open the new channel on
-	 * that old descriptor.
-	 *
-	 * A more precise instruction - check if any of the
-	 * bus->channels[i] with i = 0 -> bus->channel_count is
-	 * free (== NULL). If yes - reuse the slot. Don't grow the
-	 * bus->channels array, when have space in it.
-	 */
 	return free_idx;
 }
 
@@ -202,39 +187,16 @@ coro_bus_channel_close(struct coro_bus *bus, int channel)
 		return;
 
 	struct coro_bus_channel *ch = bus->channels[channel];
-	/* Make it disappear first so waiters observe NO_CHANNEL. */
 	bus->channels[channel] = NULL;
 
-	/* Detach all waiters before destroying the channel. */
 	wakeup_queue_wakeup_all(&ch->send_queue);
 	wakeup_queue_wakeup_all(&ch->recv_queue);
 
 #if NEED_BROADCAST
-	/* Channel set changed - may unblock broadcasters. */
 	wakeup_queue_wakeup_all(&bus->broadcast_queue);
 #endif
 
 	delete ch;
-	/*
-	 * Be very attentive here. What happens, if the channel is
-	 * closed while there are coroutines waiting on it? For
-	 * example, the channel was empty, and some coros were
-	 * waiting on its recv_queue.
-	 *
-	 * If you wakeup those coroutines and just delete the
-	 * channel right away, then those waiting coroutines might
-	 * on wakeup try to reference invalid memory.
-	 *
-	 * Can happen, for example, if you use an intrusive list
-	 * (rlist), delete the list itself (by deleting the
-	 * channel), and then the coroutines on wakeup would try
-	 * to remove themselves from the already destroyed list.
-	 *
-	 * Think how you could address that. Remove all the
-	 * waiters from the list before freeing it? Yield this
-	 * coroutine after waking up the waiters but before
-	 * freeing the channel, so the waiters could safely leave?
-	 */
 }
 
 int
@@ -253,17 +215,6 @@ coro_bus_send(struct coro_bus *bus, int channel, unsigned data)
 		coro_bus_errno_set(CORO_BUS_ERR_WOULD_BLOCK);
 		wakeup_queue_suspend_this(&ch->send_queue);
 	}
-	/*
-	 * Try sending in a loop, until success. If error, then
-	 * check which one is that. If 'wouldblock', then suspend
-	 * this coroutine and try again when woken up.
-	 *
-	 * If see the channel has space, then wakeup the first
-	 * coro in the send-queue. That is needed so when there is
-	 * enough space for many messages, and many coroutines are
-	 * waiting, they would then wake each other up one by one
-	 * as lone as there is still space.
-	 */
 }
 
 int
@@ -280,11 +231,6 @@ coro_bus_try_send(struct coro_bus *bus, int channel, unsigned data)
 	coro_bus_errno_set(CORO_BUS_ERR_NONE);
 	wakeup_queue_wakeup_first(&ch->recv_queue);
 	return 0;
-	/*
-	 * Append data if has space. Otherwise 'wouldblock' error.
-	 * Wakeup the first coro in the recv-queue! To let it know
-	 * there is data.
-	 */
 }
 
 int
