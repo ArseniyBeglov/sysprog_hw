@@ -1,0 +1,304 @@
+------------------------------------------------------------------
+Shell.
+Language: С/C++
+Deadline: 3 weeks.
+Complexity: ~15 hours on average, 350 lines of code.
+------------------------------------------------------------------
+
+Read the whole description. It contains not only the task, but
+also hints and some educative materials, time estimations, rules,
+points out the common mistakes, and suggests bonus tasks.
+
+-------------------------- Description ---------------------------
+
+You need to implement a simplified version of a command line
+console. It should take lines like this:
+
+    > command_name param1 param2 ...
+
+and execute them by calling 'command_name' with the given
+parameters. So be a terminal, basically.
+
+The files parser.h and parser.cpp already implement a command
+parser for you. You are free to use the given parser or implement
+your own or take some other one.
+
+The file parser_test.cpp can be ignored. It is just used for
+testing the parser itself. You don't have to submit it, and don't
+need to look at it unless you want to just see some examples of
+how it works.
+
+The only file of interest for you is solution.cpp which contains
+the solution template. But you are free to add more files if
+needed.
+
+The behaviour of your terminate must replicate Bash to the letter.
+At least in the aspects required by the task and tests.
+
+----------------------------- Rules ------------------------------
+
+- The program should correctly handle quoted strings even if there
+  are whitespaces inside it.
+
+- You need to handle comments (by trimming them).
+
+- The console should support pipes expressed as symbol '|' and
+  output redirection using '>' and '>>'.
+
+- The program should print all the same what would be printed by a
+  real terminal like /bin/bash.
+
+- You need to use functions pipe(), dup/dup2(), fork(), wait(),
+  open(), close(), at least one of execl/execle/execlp/execv/execvp/
+  execvP().
+
+- The 'cd' command you need to implement yourself, not via 'exec'
+  functions. Because it changes the current working directory of
+  the terminal itself. Luckily, it is easy to do with the C
+  function 'chdir()'.
+
+- The 'exit' command is also special, like 'cd'. Because it
+  concerns the terminal itself. It needs to be implemented
+  manually. But keep in mind that it should exit from the terminal
+  itself only under special condition: its output must be to the
+  shell. If it gets redirected, then it doesn't kill the shell.
+  For example, 'exit', 'exit 123 && echo test',
+  'exit 456 || echo test' - all terminate the shell. But
+  'exit | echo 100' - will not terminate. When in doubt, test the
+  behaviour with /bin/bash. Your shell must follow the same.
+
+- Your console should support tokens written without spaces when
+  /bin/bash is able to parse them too. Like this:
+  'echo "4">file' (works same as 'echo "4" > file'), or
+  'echo 100|grep 100' (works same as 'echo 100 | grep 100').
+
+- When something is unclear how it should work, you should test it
+  in the real console like /bin/bash and repeat the behaviour.
+
+- The code should be built successfully with these compiler flags:
+  `-Wextra -Werror -Wall -Wno-gnu-folding-constant`.
+
+-------------------------- Restrictions --------------------------
+
+- Global variables are not allowed (except for the already
+  existing ones).
+
+- Memory leaks are not allowed. To check them you can build with
+  the cmake option `ENABLE_LEAK_CHECKS`. Showing zero leak reports
+  from Valgrind or ASAN is not enough - they often miss the leaks.
+
+- You can not use `malloc()`, `realloc()`, `calloc()`, and so on.
+  You can only use `new` and `delete` from C++.
+
+- Length of command line input is not limited, so you can't read
+  it into a buffer of a fixed size. But each line obviously fits
+  into the main memory.
+
+- It is forbidden to use functions like system(), popen() or use
+  any other way to access existing shell-like ready-to-use
+  functions.
+
+-------------------------- Relaxations ---------------------------
+
+- You don't need to support redirect of specific output streams,
+  like stderr. These commands: 1>, 2>, $>, 1>>, and alike are not
+  needed. (Usual > and >> still are needed.)
+
+- No need to support multiple redirects like
+  'cmd > file1 > file2' or 'cmd > file1 file2'.
+
+- You don't need to support '~' nor '-' paths in 'cd' command.
+
+- You can use an already existing parser defined in parser.h and
+  .cpp files, with usage shown in solution.cpp.
+
+- You can assume, that memory allocation functions `new` and
+  `delete` never fail.
+
+----------------------- Possible solutions -----------------------
+
+- 15 points: all described above.
+
+- +5 points: support &.
+
+- +5 points: support operators && and ||. Keep in mind that this
+  bonus is relatively hard to implement.
+
+The additional options for +5 points do not include each other.
+That is, you can do none, or do only one, or do only another, or
+both for +10.
+
+Input: commands and their arguments, input/output redirection operators.
+
+Output: the same what a real Bash prints.
+
+--------------------------- Complexity ---------------------------
+
+How much time and effort it would take to do this task. The
+numbers might help you with planning. They are are gathered on the
+people who completed the task at least with the minimal points.
+
+- Lines of code: 200-450, average 350.
+
+- Required total time:
+  * Advanced level: ~10 hours.
+  * Average:        ~15 hours.
+  * Struggling:     ~20 hours and more.
+
+- Time distribution: the coding and debugging seem to be rather
+  even. There isn't much code to write actually, but you would
+  have to debug probably a lot.
+
+--------------------------- How to run ---------------------------
+
+The task uses CMake for compilation. Here is how you could use it.
+
+- Go into the task's folder, so your path is <...>/sysprog/2/.
+- Create a build folder and go there:
+    mkdir build
+    cd build
+- Configure the project:
+    cmake ..
+- Compile it:
+    make
+- Now you can run your shell via:
+    ./mybash
+
+CMake offers you a few options. Each option, like SOME_OPTION, you
+can set to a certain value using the following syntax:
+    cmake -DSOME_OPTION=value ..
+
+The options available for this task are:
+
+- ENABLE_LEAK_CHECKS - build with heap_help utility to check if
+    you have any leaks or heap misusages.
+  - 0 = disable. Default.
+  - 1 = enable
+
+- ENABLE_GLOB_SEARCH - build all the C and C++ source files in the
+    folder. It is mostly needed when you have created more files
+    for yourself and don't watch to list them all individually.
+  - 0 = disable. Default.
+  - 1 = enable
+
+- CMAKE_BUILD_TYPE.
+  - Release = enable compiler optimizations. Faster, but not much
+      possible to debug interactively.
+  - Debug = disable compiler optimizations. Slower, but good for
+      interactive debugging.
+
+------------------------- Input examples -------------------------
+
+Input examples:
+
+* Print process list and find 'init' string in them:
+
+    > ps aux | grep init
+
+* Execute code in python and search a string in its output:
+
+    > echo "print('result is ', 123 + 456)" | python -i | grep result
+
+* Print escaped quote into a file and print it:
+
+    > echo "some text\" with quote" > test.txt
+    > cat test.txt
+
+* Append to a file:
+
+    > echo "first data" > test.txt
+    > echo "second" >> test.txt
+    > cat test.txt
+
+* Start an interactive python console and do something in it:
+
+    > python
+    >>> print(1 + 2)
+    >>> 3
+
+----------------------- Advices and hints ------------------------
+
+- Try to implement a simple main.cpp file with just one hardcoded
+  command being executed with fork() + exec...().
+
+  Then try to extend it. For example, connect 2 hardcoded
+  commands via a single pipe, like `echo abc | grep a`. Use
+  fork() + exec...() + pipe() + dup2() to make output of one
+  command go into the input of the second one.
+
+  Once it works, try to add a third command to them:
+  `echo abc | grep a | cat`, for example. You would need 3 forks,
+  2 pipes, and a few dup2() calls. Once this works, you will see a
+  pattern, how to make it work for any number of pipes.
+
+- Before starting your solution code, get familiar with the
+  parser's API.
+
+- In the beginning implement command execution without |, >, >>.
+  Just one command.
+
+- The tests in tests.txt you can edit for debugging. Or copy-paste
+  them into your interactive terminal for manual debug. Try for
+  example to check if just the first tests in tests.txt are
+  working via checker.py, by deleting the rest of them.
+
+- Add support for |, >, >>. One by one. It is better to be
+  iterative in your work. Don't try to implement everything at
+  once. Nobody does that in real production development. Features
+  are added gradually.
+
+- Try asking ChatGPT or another AI general Bash questions, pipes,
+  forks, execs. Most of the time those chat-bots can be helpful.
+
+- Use the actual /bin/bash for testing how something should work.
+  Note that your default terminal might be not Bash, especially
+  if you work on Mac. Better explicitly run /bin/bash binary. In
+  there run your tests that you would like to know how they work.
+
+- If struggling with `exit` command support and the exit codes,
+  you can check the Bash exit codes using `echo $?`. It will print
+  the exit code of the last executed command. And then you just
+  repeat that behaviour in your own terminal.
+
+- When trying to pass tests, do not forget to remove or
+  comment out the debug messages. They would make your output not
+  identical to Bash, and the tests would fail.
+
+- When debugging, you would probably find it hard to do via gdb or
+  lldb, because they aren't very nice for multiprocess debugging.
+  You would have to use printf(). To simplify it you might want
+  to wrap it into a macros like `#define mylog printf`, to quickly
+  disable it via `#define mylog(...)` (thus defining the logs into
+  the void) before actual testing with checker.py.
+
+  Also some logs in child processes you probably won't see if
+  write them to STDOUT with printf(), because obviously some of
+  STDOUTs would be redirected. It might help then to write your
+  logs into some file by a hardcoded path in your solution folder.
+  So all processes would write to it their logs, and won't mess
+  their STDOUT outputs up.
+
+- Be very careful about closing the pipes correctly. Remember,
+  that if you forget to close the reading end of a pipe, then the
+  writer will eventually hang. And vice versa. Also remember, that
+  if you create a pipe(int[2]) and then call fork(), then now both
+  the parent and child have 2 descriptors, 4 in total. It is best
+  to right away close the not needed ends of the pipe in each
+  process.
+
+- Try to increase the file descriptor limit in your console if
+  getting strange errors about pipes not opening (see `ulimit -n`
+  command) (also possible that you forgot to close the unused ends
+  of your pipes somewhere).
+
+Architecture of the solution may be the following: there is a
+process-terminal, which reads user commands. On each command it
+does fork(). The new child executes the command using exec*()
+functions. The parent process waits for the child termination.
+
+For each | the terminal opens a pipe, which is used to link input
+of one child and output of another.
+
+For > and >> the terminal opens a file, and using dup/dup2()
+changes standard output for the child, so it will write to that
+file.
