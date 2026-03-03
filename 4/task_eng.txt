@@ -1,0 +1,211 @@
+------------------------------------------------------------------
+Thread pool.
+Language: С/C++
+Deadline: 3 weeks.
+Complexity: ~10 hours on average, 330 lines of code.
+------------------------------------------------------------------
+
+Read the whole description. It contains not only the task, but
+also hints and some educative materials, time estimations, rules,
+points out the common mistakes, and suggests bonus tasks.
+
+-------------------------- Description ---------------------------
+
+Need to implement a thread pool. In various programs executing
+many independent and easily parallelized tasks it is often quite
+handy to distribute them across multiple threads. But creating a
+thread for each necessity to execute something in parallel is
+very expensive in time and resources. If a task is not too long,
+doesn't read disk, doesn't touch network, then creation/deletion
+of a thread might take more time than the task itself.
+
+Then tasks are either not paralleled at all, or when there are
+many of them, people make thread pools. It is usually a task queue
+and a few so called "worker threads" which take tasks from the
+queue. Thus there is always an already created thread which can
+quickly pick up a task. And instead of exiting the thread simply
+picks up a next task.
+
+In big general purpose libraries often there is an out of the box
+solution: in Qt it is QThreadPool class, in .NET it is ThreadPool
+class, in boost it is thread_pool class. In the task you have to
+implement an own similar pool.
+
+In the files thread_pool.h and thread_pool.cpp you can find
+templates of functions and structures which need to be
+implemented.
+
+The thread pool is described by a struct thread_pool implemented
+in thread_pool.cpp. A user can only have a pointer at it. Each
+task/job is described with struct thread_task, which a user can
+create and put into the pool's queue.
+
+User can check task's status (waits for getting a worker; is
+already being executed), can wait for its end and get its result
+with thread_task_join, similar to how pthread_join works.
+
+Since the task is to implement a library, there is no 'main'
+function and no input from anywhere. You can write tests in C in a
+separate file with 'main' and which will 'include' your solution.
+For example, make a file main.cpp, add 'include "thread_pool.h"',
+and in the function 'main' you do tests. It can all be built like
+this:
+
+        gcc thread_pool.cpp main.cpp
+
+----------------------------- Rules ------------------------------
+
+- thread_pool at creation via thread_pool_new() shouldn't start
+  all max number of threads at once. The threads have to be
+  started gradually when needed, until reach the limit specified
+  in thread_pool_new().
+
+- Joined but not yet deleted tasks can be re-pushed back into the
+  pool.
+
+- The other rules can be read in the documentation in
+  thread_pool.h and deducted from the tests.
+
+-------------------------- Restrictions --------------------------
+
+- Global variables are not allowed (except for the already
+  existing ones).
+
+- Memory leaks are not allowed. To check them you can build with
+  the cmake option `ENABLE_LEAK_CHECKS`. Showing zero leak reports
+  from Valgrind or ASAN is not enough - they often miss the leaks.
+
+- The code should have zero busy loops or sleep loops. These are
+  only allowed in tests. I.e. in thread_task_join() you can't
+  just do 'while (!task->is_finished) {usleep(1)};'. For waiting
+  on anything you need to use pthread_cond_t.
+
+- You can not use `malloc()`, `realloc()`, `calloc()`, and so on.
+  You can only use `new` and `delete` from C++.
+
+-------------------------- Relaxations ---------------------------
+
+- There is no limit on the number of mutexes and condvars. You
+  can even store them in each task.
+
+- You can assume, that memory allocation functions `new` and
+  `delete` never fail.
+
+----------------------- Possible solutions -----------------------
+
+- 15 points: implement all functions from thread_pool.h, which are
+  not hidden inside macros.
+
+- +5 points: implement thread_task_detach(). The documentation is
+  in thread_pool.h. You need to define the macro NEED_DETACH to 1
+  then.
+
+- +5 points: implement thread_task_timed_join(). The documentation
+  is in thread_pool.h. You need to define the macro
+  NEED_TIMED_JOIN to 1 then.
+
+The additional options for +5 points do not include each other.
+That is, you can do none, or do only one, or do only another, or
+both for +10.
+
+--------------------------- Complexity ---------------------------
+
+How much time and effort it would take to do this task. The
+numbers might help you with planning. They are are gathered on the
+people who completed the task at least with the minimal points.
+
+- Lines of code: 250-400, average 330.
+
+- Required total time:
+  * Advanced level: ~6 hours.
+  * Average:       ~10 hours.
+  * Struggling:    ~19 hours and more.
+
+- Time distribution:
+  * Active coding: ~2-4 hours.
+  * The rest is mostly debugging. It can be tricky in
+      multithreaded environment.
+
+--------------------------- How to run ---------------------------
+
+The task uses CMake for compilation. Here is how you could use it.
+
+- Go into the task's folder, so your path is <...>/sysprog/4/.
+- Create a build folder and go there:
+    mkdir build
+    cd build
+- Configure the project:
+    cmake ..
+- Compile it:
+    make
+- Now you can run the tests via:
+    ./test
+
+CMake offers you a few options. Each option, like SOME_OPTION, you
+can set to a certain value using the following syntax:
+    cmake -DSOME_OPTION=value ..
+
+The options available for this task are:
+
+- ENABLE_LEAK_CHECKS - build with heap_help utility to check if
+    you have any leaks or heap misusages.
+  - 0 = disable. Default.
+  - 1 = enable
+
+- ENABLE_GLOB_SEARCH - build all the C and C++ source files in the
+    folder. It is mostly needed when you have created more files
+    for yourself and don't watch to list them all individually.
+  - 0 = disable. Default.
+  - 1 = enable
+
+- CMAKE_BUILD_TYPE.
+  - Release = enable compiler optimizations. Faster, but not much
+      possible to debug interactively.
+  - Debug = disable compiler optimizations. Slower, but good for
+      interactive debugging.
+
+----------------------- Advices and hints ------------------------
+
+- Try to ask ChatGPT or another AI about some theory if you are
+  struggling with the basic concepts.
+
+- It is vital that you understand the following: what is a thread,
+  what is a mutex, and what is a condition variable.
+
+  Thread is basically an executor. Something that can run code.
+  When you have multiple threads, they can run the same or
+  different code literally in parallel, on multiple physical CPU
+  cores.
+
+  Mutex is a way to protect some data from being accessed by
+  multiple threads at once. It is needed when you need to update
+  or read some untrivial state (multiple variables at once or do
+  multiple actions with one variable like an increment) and it
+  can't be done in a single machine instruction. Then you do
+  mutex-lock, do the work, and mutex-unlock. Between the lock and
+  unlock only one thread will be able to work.
+
+  Condition variable is a way to block a thread so it could wait
+  for a certain "event" or a "condition". Hence the name -
+  "condition variable". How it works is that one thread takes a
+  mutex-lock, checks a certain condition, sees that it is not
+  satisfied, and waits on that condition. Another thread will
+  eventually take the mutex-lock and "signal" this condition.
+  This will make the first thread wakeup. And then it can
+  double-check that the condition is indeed satisfied. You can try
+  to search some examples in the Internet to see specific
+  usecases.
+
+- When making the detach-bonus, pay special attention to the case
+  what happens when one thread calls detach and at the same time
+  the task is finished in the worker. It is quite easy to make a
+  memory leak or a use-after-free here. You need to make sure that
+  if detach is called, then either the task is already finished
+  and gets deleted, or it will be deleted automatically when it is
+  finished.
+
+- When heap_help is enabled, the tests might run for a relatively
+  long time. For the sake of faster debugging you might want to
+  reduce the TPOOL_MAX_TASKS constant. Just make sure it is
+  reverted back to its original value before you submit the final
+  solution.
