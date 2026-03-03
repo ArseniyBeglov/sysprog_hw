@@ -94,12 +94,3 @@ chat_client_get_events(const struct chat_client *client);
 int
 chat_client_feed(struct chat_client *client, const char *msg,
 		 uint32_t msg_size);
-
-static inline int
-chat_client_feed(struct chat_client *client, std::string_view msg,
-		 uint32_t msg_size)
-{
-	if (msg_size > msg.size())
-		msg_size = (uint32_t)msg.size();
-	return chat_client_feed(client, msg.data(), msg_size);
-}
