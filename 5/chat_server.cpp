@@ -238,7 +238,7 @@ chat_server_listen(struct chat_server *server, uint16_t port)
 	sockaddr_in addr;
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	addr.sin_port = htons(port);
 
 	if (bind(lfd, (sockaddr *)&addr, sizeof(addr)) != 0) {
@@ -482,8 +482,14 @@ chat_server_get_events(const struct chat_server *server)
 {
 	if (server->listen_fd < 0 || server->epfd < 0)
 		return 0;
-
-	return CHAT_EVENT_INPUT;
+	int mask = CHAT_EVENT_INPUT;
+	for (const Peer *p : server->peers) {
+		if (p != nullptr && p->fd >= 0 && p->out.size() != 0) {
+			mask |= CHAT_EVENT_OUTPUT;
+			break;
+		}
+	}
+	return mask;
 }
 
 int
