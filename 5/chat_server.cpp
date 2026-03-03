@@ -181,7 +181,7 @@ peer_close_and_delete(int epfd, Peer *p)
 	delete p;
 }
 
-} // namespace
+}
 
 struct chat_server {
 	int listen_fd = -1;
@@ -208,7 +208,7 @@ chat_server_delete(struct chat_server *server)
 	server->inbox.clear();
 
 	if (server->epfd >= 0) {
-		// Close peers first (they remove themselves from epoll).
+
 		for (auto *p : server->peers)
 			peer_close_and_delete(server->epfd, p);
 		server->peers.clear();
@@ -267,7 +267,7 @@ chat_server_listen(struct chat_server *server, uint16_t port)
 	epoll_event ev;
 	memset(&ev, 0, sizeof(ev));
 	ev.events = EPOLLIN | EPOLLET;
-	ev.data.ptr = server; // identify as "listener" via pointer equality.
+	ev.data.ptr = server;
 	if (epoll_ctl(epfd, EPOLL_CTL_ADD, lfd, &ev) != 0) {
 		close(epfd);
 		close(lfd);
@@ -312,8 +312,8 @@ server_accept_all(chat_server *s)
 
 		epoll_event ev;
 		memset(&ev, 0, sizeof(ev));
-		// We register both IN and OUT once. OUT is only meaningful after
-		// we have hit EWOULDBLOCK while flushing.
+
+
 		ev.events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLET;
 		ev.data.ptr = p;
 		if (epoll_ctl(s->epfd, EPOLL_CTL_ADD, cfd, &ev) != 0) {
@@ -333,10 +333,10 @@ server_broadcast(chat_server *s, Peer *from, std::string_view author,
 		if (p == nullptr || p->fd < 0)
 			continue;
 		if (from != nullptr && p == from)
-			continue; // don't echo back.
+			continue;
 		pkt_append_broadcast(p->out, author, text);
-		// In EPOLLET we might not get EPOLLOUT if already writable, so
-		// try to flush right away.
+
+
 		fd_flush(p->fd, p->out);
 	}
 }
@@ -344,12 +344,12 @@ server_broadcast(chat_server *s, Peer *from, std::string_view author,
 static int
 server_handle_peer_io(chat_server *s, Peer *p)
 {
-	// Read as much as possible.
+
 	int rc = fd_read_all(p->fd, p->in);
 	if (rc != 0)
 		return rc;
 
-	// Parse and handle packets.
+
 	while (true) {
 		uint8_t type;
 		std::string payload;
@@ -375,7 +375,7 @@ server_handle_peer_io(chat_server *s, Peer *p)
 			std::string_view();
 #endif
 
-		// Push to server's own inbox.
+
 		auto *m = new chat_message();
 		m->data = body;
 #if NEED_AUTHOR
@@ -383,11 +383,11 @@ server_handle_peer_io(chat_server *s, Peer *p)
 #endif
 		s->inbox.push_back(m);
 
-		// Broadcast to others.
+
 		server_broadcast(s, p, author, body);
 	}
 
-	// Flush pending output.
+
 	return fd_flush(p->fd, p->out);
 }
 
@@ -415,7 +415,7 @@ chat_server_update(struct chat_server *server, double timeout)
 		void *tag = evs[i].data.ptr;
 		uint32_t re = evs[i].events;
 		if (tag == server) {
-			// Listener.
+
 			int rc = server_accept_all(server);
 			if (rc != 0)
 				return rc;
@@ -424,7 +424,7 @@ chat_server_update(struct chat_server *server, double timeout)
 		}
 		Peer *p = (Peer *)tag;
 		if ((re & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) != 0) {
-			// Drop peer.
+
 			for (size_t k = 0; k < server->peers.size(); ++k) {
 				if (server->peers[k] == p) {
 					server->peers[k] = nullptr;
@@ -452,7 +452,7 @@ chat_server_update(struct chat_server *server, double timeout)
 		}
 	}
 
-	// Opportunistically compact peer list (keep it cheap).
+
 	if (server->peers.size() > 0 && server->peers.size() % 64 == 0) {
 		std::vector<Peer *> tmp;
 		tmp.reserve(server->peers.size());
@@ -482,7 +482,7 @@ chat_server_get_events(const struct chat_server *server)
 {
 	if (server->listen_fd < 0 || server->epfd < 0)
 		return 0;
-	// epoll_wait should be called, so "input" is always wanted.
+
 	return CHAT_EVENT_INPUT;
 }
 
@@ -497,11 +497,7 @@ chat_server_feed(struct chat_server *server, const char *msg, uint32_t msg_size)
 #else
 	if (server->listen_fd < 0 || server->epfd < 0)
 		return CHAT_ERR_NOT_STARTED;
-	/*
-	 * In tests feed() can be called before the first update(), while clients
-	 * are already connected from their side. Accept pending sockets here so
-	 * server messages are delivered immediately.
-	 */
+
 	int acc_rc = server_accept_all(server);
 	if (acc_rc != 0)
 		return acc_rc;

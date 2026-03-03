@@ -18,7 +18,7 @@
 
 namespace {
 
-// Grow-only byte buffer with a read cursor.
+
 struct ByteBuf {
 	std::string b;
 	size_t r = 0;
@@ -39,7 +39,7 @@ struct ByteBuf {
 			r = 0;
 			return;
 		}
-		// Compact from time to time to avoid unbounded growth.
+
 		if (r > (1u << 20)) {
 			b.erase(0, r);
 			r = 0;
@@ -169,7 +169,7 @@ fd_read_all(int fd, ByteBuf &in)
 	}
 }
 
-} // namespace
+}
 
 struct chat_client {
 	int sock = -1;
@@ -250,7 +250,7 @@ chat_client_connect(struct chat_client *client, std::string_view addr)
 	client->sock = fd;
 
 #if NEED_AUTHOR
-	// Send our name once right after connect.
+
 	pkt_append_name(client->net_out, client->my_name);
 	client->name_sent = true;
 	int rc = fd_flush(client->sock, client->net_out);
