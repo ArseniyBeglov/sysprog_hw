@@ -1,7 +1,6 @@
 #pragma once
 
 #include <stdint.h>
-#include <string_view>
 
 struct chat_server;
 
