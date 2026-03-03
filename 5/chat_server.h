@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <string_view>
 
 struct chat_server;
 
@@ -104,3 +105,12 @@ chat_server_get_events(const struct chat_server *server);
 int
 chat_server_feed(struct chat_server *server, const char *msg,
 		 uint32_t msg_size);
+
+static inline int
+chat_server_feed(struct chat_server *server, std::string_view msg,
+		 uint32_t msg_size)
+{
+	if (msg_size > msg.size())
+		msg_size = (uint32_t)msg.size();
+	return chat_server_feed(server, msg.data(), msg_size);
+}

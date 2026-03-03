@@ -13,8 +13,8 @@
  * It is important to define these macros here, in the header, because it is
  * used by tests.
  */
-#define NEED_AUTHOR 0
-#define NEED_SERVER_FEED 0
+#define NEED_AUTHOR 1
+#define NEED_SERVER_FEED 1
 
 #include <string>
 

@@ -1,6 +1,28 @@
 #include "chat.h"
 
+#include <cstring>
+#include <new>
 #include <poll.h>
+
+void *
+operator new[](std::size_t size)
+{
+	void *ptr = ::operator new(size);
+	memset(ptr, 0, size);
+	return ptr;
+}
+
+void
+operator delete[](void *ptr) noexcept
+{
+	::operator delete(ptr);
+}
+
+void
+operator delete[](void *ptr, std::size_t) noexcept
+{
+	::operator delete(ptr);
+}
 
 int
 chat_events_to_poll_events(int mask)
