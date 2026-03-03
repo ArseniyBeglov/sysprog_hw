@@ -314,6 +314,10 @@ ufs_write(int fd, const char *buf, size_t size)
 		set_error(UFS_ERR_NO_ERR);
 		return 0;
 	}
+	if (buf == nullptr) {
+		set_error(UFS_ERR_NO_MEM);
+		return -1;
+	}
 	file *f = desc->atfile;
 	if (desc->pos > MAX_FILE_SIZE || size > MAX_FILE_SIZE - desc->pos) {
 		set_error(UFS_ERR_NO_MEM);
@@ -339,6 +343,10 @@ ufs_write(int fd, const char *buf, size_t size)
 	size_t block_index = desc->pos / BLOCK_SIZE;
 	size_t offset = desc->pos % BLOCK_SIZE;
 	block *b = get_block_by_index(f, block_index);
+	if (b == nullptr) {
+		set_error(UFS_ERR_NO_MEM);
+		return -1;
+	}
 	size_t remaining = size;
 	const char *src = buf;
 	while (remaining > 0) {
@@ -347,8 +355,13 @@ ufs_write(int fd, const char *buf, size_t size)
 		src += chunk;
 		remaining -= chunk;
 		offset = 0;
-		if (remaining > 0)
+		if (remaining > 0) {
 			b = next_block_or_null(f, b);
+			if (b == nullptr) {
+				set_error(UFS_ERR_NO_MEM);
+				return -1;
+			}
+		}
 	}
 
 	desc->pos = end_pos;
@@ -376,6 +389,10 @@ ufs_read(int fd, char *buf, size_t size)
 		set_error(UFS_ERR_NO_ERR);
 		return 0;
 	}
+	if (buf == nullptr) {
+		set_error(UFS_ERR_NO_MEM);
+		return -1;
+	}
 	file *f = desc->atfile;
 	if (desc->pos >= f->size) {
 		set_error(UFS_ERR_NO_ERR);
@@ -386,6 +403,10 @@ ufs_read(int fd, char *buf, size_t size)
 	size_t block_index = desc->pos / BLOCK_SIZE;
 	size_t offset = desc->pos % BLOCK_SIZE;
 	block *b = get_block_by_index(f, block_index);
+	if (b == nullptr) {
+		set_error(UFS_ERR_NO_MEM);
+		return -1;
+	}
 	size_t remaining = to_read;
 	char *dst = buf;
 	while (remaining > 0) {
@@ -394,8 +415,13 @@ ufs_read(int fd, char *buf, size_t size)
 		dst += chunk;
 		remaining -= chunk;
 		offset = 0;
-		if (remaining > 0)
+		if (remaining > 0) {
 			b = next_block_or_null(f, b);
+			if (b == nullptr) {
+				set_error(UFS_ERR_NO_MEM);
+				return -1;
+			}
+		}
 	}
 
 	desc->pos += to_read;

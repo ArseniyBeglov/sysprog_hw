@@ -16,8 +16,8 @@
  * It is important to define these macros here, in the header, because it is
  * used by tests.
  */
-#define NEED_DETACH 0
-#define NEED_TIMED_JOIN 0
+#define NEED_DETACH 1
+#define NEED_TIMED_JOIN 1
 
 struct thread_pool;
 struct thread_task;
